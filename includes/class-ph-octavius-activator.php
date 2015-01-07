@@ -15,6 +15,7 @@ class PH_Octavius_Activator {
 	public static function activate() {
  		$store = new PH_Octavius_Store();
  		$store->install();
+ 		flush_rewrite_rules();
 	}
 
 }

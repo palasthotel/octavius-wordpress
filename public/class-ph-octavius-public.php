@@ -130,7 +130,7 @@ class PH_Octavius_Public {
 		}
 
 	    header("Content-Type: application/json;charset=UTF-8");
-	    echo json_encode($root);
+	    print json_encode($root);
 	    exit();
   	}
 

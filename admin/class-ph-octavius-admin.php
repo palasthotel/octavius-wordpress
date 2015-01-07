@@ -39,7 +39,7 @@ class PH_Octavius_Admin {
 	 * 
 	 */
 	public function menu_page() {
-		add_submenu_page( 'options-general.php', 'Octavius Settings', 'Octavius Settings', 'manage_options', $this->settings_page, array($this, "render_menu"));
+		add_submenu_page( 'options-general.php', 'Octavius', 'Octavius', 'manage_options', $this->settings_page, array($this, "render_menu"));
 	}
 
 	/**
