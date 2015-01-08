@@ -26,7 +26,8 @@ class PH_Octavius_Admin {
 	/**
 	 * Initialize the class and set its properties.
 	 */
-	public function __construct( $plugin_name, $version ) {
+	public function __construct( $plugin_name, $version ) 
+	{
 
 		$this->plugin_name = $plugin_name;
 		$this->settings_page = $this->plugin_name."_settings";
@@ -38,14 +39,16 @@ class PH_Octavius_Admin {
 	 * Register the octavius menu page
 	 * 
 	 */
-	public function menu_page() {
+	public function menu_page() 
+	{
 		add_submenu_page( 'options-general.php', 'Octavius', 'Octavius', 'manage_options', $this->settings_page, array($this, "render_menu"));
 	}
 
 	/**
 	 *  renders settings page for octavius
 	 */
-	public function render_menu(){
+	public function render_menu()
+	{
 		global $wp;
 
 		$store = new PH_Octavius_Store();
@@ -68,6 +71,14 @@ class PH_Octavius_Admin {
 		$submit_button_text = "Speichern";
 
 		require dirname(__FILE__)."/partials/octavius-settings-display.php";
+	}
+
+	/**
+	 * add grid boxes
+	 */
+	public function load_grid_boxes()
+	{
+		require dirname(__FILE__)."/../grid-boxes/grid-octavius-box.inc";
 	}
 
 }

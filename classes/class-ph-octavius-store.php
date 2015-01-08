@@ -15,7 +15,8 @@ class PH_Octavius_Store{
 	/**
 	 * Initialize the class and set its properties.
 	 */
-	public function __construct() {
+	public function __construct() 
+	{
 		global $wpdb;
 		$this->tables = array();
 		$this->tables["day"] = $wpdb->prefix."octavius_ga_day";
@@ -24,6 +25,26 @@ class PH_Octavius_Store{
 		$this->tables["ever"] = $wpdb->prefix."octavius_ga_ever";
 		$this->tables["facebook"] = $wpdb->prefix."octavius_facebook";
 		$this->tables["twitter"] = $wpdb->prefix."octavius_twitter";
+	}
+
+	/**
+	 * returns all available service types
+	 * @return array
+	 */
+	public function getServiceTypes()
+	{
+		return array("day", "week", "month", "ever", "facebook", "twitter");
+	}
+
+	/**
+	 * get top List by type
+	 * @param  string 	$type 	Service type string
+	 * @return array 			Array of post ids
+	 */
+	public function getTop($type){
+		$table = $this->tables[$type];
+		global $wpdb;
+		return $wpdb->get_results( 'SELECT * FROM '.$table.' ORDER BY views DESC', OBJECT );
 	}
 
 	/**
@@ -44,7 +65,6 @@ class PH_Octavius_Store{
 	public function  update_options($client, $pw, $domain){
 		update_option("ph_octavius_client", sanitize_text_field( $client ) );
 		update_option("ph_octavius_pw", sanitize_text_field( $pw ) );
-		// domain without trailing slash
 		update_option("ph_octavius_domain", rtrim(sanitize_text_field( $domain ), "/") );
 	}
 
@@ -81,8 +101,6 @@ class PH_Octavius_Store{
 			echo "[ERROR] NO JSON RESULT";
 		} else {
 			foreach($json_result as $item) {
-				var_dump($item);
-				break;
 	        	$wpdb->replace( 
 	        		$table, 
 	        		array( 

@@ -132,6 +132,11 @@ class PH_Octavius {
 		// settings page
 		$this->loader->add_action( 'admin_menu', $plugin_admin, 'menu_page' );
 
+		/**
+		 * grid box
+		 */
+		$this->loader->add_action( 'grid_load_classes', $plugin_admin, 'load_grid_boxes' );
+
 	}
 
 	/**
