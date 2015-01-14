@@ -77,7 +77,7 @@ class PH_Octavius_Public {
 		switch ($wp->query_vars['__action']) {
 		    case "importer":
 				$store = new PH_Octavius_Store();
-				$store->get_data_from_remote();
+				print json_encode( $store->get_data_from_remote() );
 				break; 
 		    case "list":
 				$this->get_the_url_list((int) $wp->query_vars['__page']);

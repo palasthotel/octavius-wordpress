@@ -5,7 +5,7 @@ class grid_octavius_list_box extends grid_list_box
 	public function __construct()
 	{
 		$this->content=new StdClass();
-		$this->content->type = "day";
+		$this->content->type = "";
 		$this->content->limit = 5;
 		$this->content->category = "";
 	}
@@ -35,12 +35,20 @@ class grid_octavius_list_box extends grid_list_box
 			{
 				return "<p>Kein Octavius Service verfügbar</p>";
 			}
+			if($this->content->type == "")
+			{
+				return "<p>Keine Daten gefunden</p>";
+			}
 			$store = new PH_Octavius_Store();
 			$list = $store->getTop($this->content->type);
 			$posts = array();
-			foreach ($list as $value) {
-				$post = get_post($value->pid);
-				$posts[] = "<li><a href='".$post->guid."'>".$post->post_title."</a></li>";
+			foreach ($list as $index => $value) {
+				if($index > $this->content->limit) break;
+				$post = get_post($value->pid, OBJECT);
+				if(is_object($post)){
+					$posts[] = "<li><a href='".get_the_permalink($value->pid)."'>".$post->post_title."</a></li>";
+				}
+
 			}
 			return "<ul>".implode("", $posts)."</ul>";
 			
@@ -48,6 +56,19 @@ class grid_octavius_list_box extends grid_list_box
 	}
 
 	public function contentStructure() {
+		$store = new PH_Octavius_Store();
+		$types = $store->getServiceTypes();
+		$arr_types = array();
+		$arr_types[] = array(
+			"key" => "",
+			"text" => t("Choose a type"),
+		);
+		foreach ($types as $type) {
+			$arr_types[] = array(
+				"key" => $type,
+				"text" => $type,
+			);
+		}
 		$args = array(
 			'orderby' => 'name',
 			'order' => 'ASC'
@@ -69,24 +90,7 @@ class grid_octavius_list_box extends grid_list_box
 						'key' => 'type',
 						'label' => t('Type'),
 						'type' => 'select',
-						'selections'=>array(
-							array(
-								"key"=>"day",
-								"text"=>t("Day GoogleAnalytics"),
-							),
-							array(
-								"key"=>"week",
-								"text"=>t("Week GoogleAnalytics"),
-							),
-							array(
-								"key"=>"month",
-								"text"=>t("Month GoogleAnalytics"),
-							),
-							array(
-								"key"=>"ever",
-								"text"=>t("Ever GoogleAnalytics"),
-							),
-						),
+						'selections'=>$arr_types,
 					),
 					array(
 						'key' => 'category',
