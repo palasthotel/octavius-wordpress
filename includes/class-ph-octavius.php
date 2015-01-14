@@ -40,7 +40,6 @@ class PH_Octavius {
 	 *
 	 */
 	public function __construct() {
-
 		$this->plugin_name = 'ph-octavius';
 		$this->version = '1.0.0';
 

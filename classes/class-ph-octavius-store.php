@@ -18,13 +18,7 @@ class PH_Octavius_Store{
 	public function __construct() 
 	{
 		global $wpdb;
-		$this->tables = array();
-		$this->tables["day"] = $wpdb->prefix."octavius_ga_day";
-		$this->tables["week"] = $wpdb->prefix."octavius_ga_week";
-		$this->tables["month"] = $wpdb->prefix."octavius_ga_month";
-		$this->tables["ever"] = $wpdb->prefix."octavius_ga_ever";
-		$this->tables["facebook"] = $wpdb->prefix."octavius_facebook";
-		$this->tables["twitter"] = $wpdb->prefix."octavius_twitter";
+		$this->table = $wpdb->prefix."octavius_top_contents";
 	}
 
 	/**
@@ -33,7 +27,13 @@ class PH_Octavius_Store{
 	 */
 	public function getServiceTypes()
 	{
-		return array("day", "week", "month", "ever", "facebook", "twitter");
+		global $wpdb;
+		$items = $wpdb->get_results("SELECT DISTINCT type FROM ".$wpdb->prefix."octavius_top_contents");
+		$types = array();
+		foreach ($items as $item) {
+			$types[] = $item->type;
+		}
+		return $types;
 	}
 
 	/**
@@ -42,9 +42,8 @@ class PH_Octavius_Store{
 	 * @return array 			Array of post ids
 	 */
 	public function getTop($type){
-		$table = $this->tables[$type];
 		global $wpdb;
-		return $wpdb->get_results( 'SELECT * FROM '.$table.' ORDER BY views DESC', OBJECT );
+		return $wpdb->get_results( 'SELECT * FROM '.$this->table.' WHERE type = "'.$type.'" ORDER BY views DESC', OBJECT );
 	}
 
 	/**
@@ -65,7 +64,15 @@ class PH_Octavius_Store{
 	public function  update_options($client, $pw, $domain){
 		update_option("ph_octavius_client", sanitize_text_field( $client ) );
 		update_option("ph_octavius_pw", sanitize_text_field( $pw ) );
-		update_option("ph_octavius_domain", rtrim(sanitize_text_field( $domain ), "/") );
+		/**
+		 * Save the domain like we need it
+		 */
+		if( strpos($domain,"http://") !== 0 )
+		{
+			$domain = "http://".$domain;
+		}
+		$domain = rtrim($domain, "/");
+		update_option("ph_octavius_domain", sanitize_text_field( $domain ) );
 	}
 
 	/**
@@ -75,14 +82,14 @@ class PH_Octavius_Store{
 		$options = $this->get_options();
 		// get Latest Date from Octavius
 		$location = $options->domain."/v1.0/".$options->client."/getTopLists";
-
 		$curl = new PH_Octavius_CURL($location, $options->client, $options->pw );
 		$json_result = $curl->get_JSON();
-
+		$return = array();
+		if(!is_array($json_result) && !is_object($json_result)) return $return;
         foreach ($json_result as $type => $data) {
-        	$this->import_tops($options->domain.$data->url, $this->tables[$type], $options);
+        	$return[$type] = $this->import_tops($options->domain.$data->url, $type, $options);
         }
-        
+        return $return;
 	}
 
 	/**
@@ -91,24 +98,43 @@ class PH_Octavius_Store{
 	 * @param  table that get the data
 	 * @param  htaccess user:password
 	 */
-	private function import_tops($url, $table, $options){
-
+	private function import_tops($url, $type, $options){
 		$curl = new PH_Octavius_CURL($url, $options->client, $options->pw);
 		$json_result = $curl->get_JSON();
-
 		global $wpdb;
 		if(is_null($json_result)) {
-			echo "[ERROR] NO JSON RESULT";
+			return "[ERROR] NO JSON RESULT";
 		} else {
-			foreach($json_result as $item) {
-	        	$wpdb->replace( 
-	        		$table, 
+			$wpdb->delete( $this->table, array( 'type' => $type ) );
+			$counter = 0;
+			foreach($json_result as $item) 
+			{
+				$count = null;
+				// TODO: save all types of numbers
+				if($type == "facebook"){
+					$count = $item->like;
+				} else if($type == "twitter"){
+					$count = $item->count;
+				} else {
+					$count = $item->pageviews;
+				}
+				
+	        	$result = $wpdb->replace( 
+	        		$this->table, 
 	        		array( 
 	        			"pid" => $item->page_id , 
-	        			"views" => $item->pageviews,
+	        			"views" => $count,
+	        			"type" => $type,
+	        		),
+	        		array(
+	        			"%d",
+	        			"%d",
+	        			"%s",
 	        		)
 	        	);
+	        	$counter++;
 	       	}
+	       	return $counter;
 		}
 	}
 
@@ -120,15 +146,16 @@ class PH_Octavius_Store{
 		/**
 		 * Create content_relations_relations table
 		 */
-		foreach ($this->tables as $key => $table) {
-			dbDelta( "CREATE TABLE IF NOT EXISTS `".$table."` (
-				pid BIGINT unsigned NOT NULL,
-				views INT unsigned NOT NULL,
-				PRIMARY KEY pid (pid),
-				KEY `views` (`views`)
-			);");
-		}
-
+		dbDelta( "CREATE TABLE IF NOT EXISTS `".$this->table."` (
+			id INT unsigned NOT NULL AUTO_INCREMENT,
+			pid BIGINT unsigned NOT NULL,
+			type VARCHAR(30) NOT NULL,
+			views INT unsigned NOT NULL,
+			PRIMARY KEY id (id),
+			UNIQUE KEY `pid_per_type` (`pid`,`type`),
+			KEY `type` (`type`),
+			KEY `views` (`views`)
+		);");
 	}
 
 	/**
@@ -136,10 +163,7 @@ class PH_Octavius_Store{
 	 */
 	public function uninstall(){
 		global $wpdb;
-		foreach ($this->tables as $key => $table) {
-			$wpdb->query( "DROP TABLE `".$table."`;" );
-		}
-		
+		$wpdb->query( "DROP TABLE `".$this->table."`;" );		
 	}
 
 }
