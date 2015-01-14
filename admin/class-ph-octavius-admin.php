@@ -31,6 +31,7 @@ class PH_Octavius_Admin {
 
 		$this->plugin_name = $plugin_name;
 		$this->settings_page = $this->plugin_name."_settings";
+		$this->tool_url_checker_page = $this->plugin_name."_url_checker";
 		$this->version = $version;
 
 	}
@@ -39,15 +40,16 @@ class PH_Octavius_Admin {
 	 * Register the octavius menu page
 	 * 
 	 */
-	public function menu_page() 
+	public function menu_pages() 
 	{
-		add_submenu_page( 'options-general.php', 'Octavius', 'Octavius', 'manage_options', $this->settings_page, array($this, "render_menu"));
+		add_submenu_page( 'options-general.php', 'Octavius', 'Octavius', 'manage_options', $this->settings_page, array($this, "render_octavius_settings"));
+		add_submenu_page( 'tools.php', 'URL Checker', 'URL Checker', 'manage_options', $this->tool_url_checker_page, array($this, "render_tool_url_checker"));
 	}
 
 	/**
 	 *  renders settings page for octavius
 	 */
-	public function render_menu()
+	public function render_octavius_settings()
 	{
 		global $wp;
 
@@ -71,6 +73,19 @@ class PH_Octavius_Admin {
 		$submit_button_text = "Speichern";
 
 		require dirname(__FILE__)."/partials/octavius-settings-display.php";
+	}
+
+	/**
+	 *  renders settings page for octavius
+	 */
+	public function render_tool_url_checker()
+	{
+		global $wp;
+
+		$store = new PH_Octavius_Store();
+		$options = $store->get_options();
+
+		require dirname(__FILE__)."/partials/octavius-url-check-display.php";
 	}
 
 	/**

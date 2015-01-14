@@ -129,8 +129,10 @@ class PH_Octavius {
 
 		$plugin_admin = new PH_Octavius_Admin( $this->get_plugin_name(), $this->get_version() );
 
-		// settings page
-		$this->loader->add_action( 'admin_menu', $plugin_admin, 'menu_page' );
+		/**
+		 * registers all menu pages
+		 */
+		$this->loader->add_action( 'admin_menu', $plugin_admin, 'menu_pages' );
 
 		/**
 		 * grid box
