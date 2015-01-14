@@ -9,7 +9,7 @@
  * Plugin Name:       PALASTHOTEL Octavius
  * Plugin URI:        https://github.com/palasthotel/octavius-wordpress
  * Description:       This plugin retrieves data from PALASTHOTEL Octavius service
- * Version:           1.0.0
+ * Version:           1.0
  * Author:            PALASTHOTEL Gesellschaft für digitale Pracht mbH
  * License:           GPL-3.0
  * License URI:       https://github.com/palasthotel/octavius-wordpress/blob/master/LICENSE

@@ -43,7 +43,7 @@ class PH_Octavius_Admin {
 	public function menu_pages() 
 	{
 		add_submenu_page( 'options-general.php', 'Octavius', 'Octavius', 'manage_options', $this->settings_page, array($this, "render_octavius_settings"));
-		add_submenu_page( 'tools.php', 'URL Checker', 'URL Checker', 'manage_options', $this->tool_url_checker_page, array($this, "render_tool_url_checker"));
+		// add_submenu_page( 'tools.php', 'URL Checker', 'URL Checker', 'manage_options', $this->tool_url_checker_page, array($this, "render_tool_url_checker"));
 	}
 
 	/**
