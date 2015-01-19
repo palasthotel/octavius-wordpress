@@ -7,9 +7,14 @@
 class PH_Octavius_Store{
 
 	/**
-	 * array of table names
+	 * main table of octavius 
 	 */
-	private $tables;
+	private $table;
+
+	/**
+	 * url checker table
+	 */
+	private $table_url_checker;
 
 
 	/**
@@ -19,6 +24,7 @@ class PH_Octavius_Store{
 	{
 		global $wpdb;
 		$this->table = $wpdb->prefix."octavius_top_contents";
+		$this->table_url_checker = $wpdb->prefix."octavius_all_ga_urls";
 	}
 
 	/**
@@ -139,9 +145,27 @@ class PH_Octavius_Store{
 	}
 
 	/**
+	 * get urls for url checker
+	 */
+	public function get_all_urls($page = 1)
+	{
+		$options = $this->get_options();
+		$domain = $options->domain;
+		$client = $options->client;
+
+		$url = $domain."/v1.0/".$client."/url-checker/".$page;
+
+		
+		var_dump($url);
+		$curl = new PH_Octavius_CURL($url, $options->client, $options->pw);
+		return $curl->get_JSON();
+	}
+
+	/**
 	 * installation method that creates tables in database
 	 */
-	public function install(){
+	public function install()
+	{
 		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
 		/**
 		 * Create content_relations_relations table
@@ -156,6 +180,12 @@ class PH_Octavius_Store{
 			KEY `type` (`type`),
 			KEY `views` (`views`)
 		);");
+		dbDelta( "CREATE TABLE IF NOT EXISTS `".$this->table_url_checker."` (
+			id INT unsigned NOT NULL AUTO_INCREMENT,
+			url VARCHAR(255) NOT NULL,
+			PRIMARY KEY id (id),
+			UNIQUE KEY `url` (`url`)
+		);");
 	}
 
 	/**
@@ -163,7 +193,8 @@ class PH_Octavius_Store{
 	 */
 	public function uninstall(){
 		global $wpdb;
-		$wpdb->query( "DROP TABLE `".$this->table."`;" );		
+		$wpdb->query( "DROP TABLE IF EXISTS `".$this->table."`;" );
+		$wpdb->query( "DROP TABLE IF EXISTS `".$this->table_url_checker."`;" );		
 	}
 
 }

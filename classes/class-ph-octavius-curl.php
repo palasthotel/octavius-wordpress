@@ -57,23 +57,33 @@ class PH_Octavius_CURL{
 	 * 
 	 */
 	private function execute(){
-		$ch = curl_init ();
-        curl_setopt($ch,CURLOPT_URL, $this->url);
-        curl_setopt($ch,CURLOPT_RETURNTRANSFER,1);
-        if($this->pw != ""){
-        	curl_setopt($ch,CURLOPT_USERPWD,$this->client.":".$this->pw);
-        }
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-        /**
-		 * bugfix for errors in WP plugins
-		 */
-		curl_setopt(
-			$ch, 
-			CURLOPT_USERAGENT, 
-			"Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.2 (KHTML, like Gecko) Chrome/22.0.1216.0 Safari/537.2"
-		);
-        $this->returned = curl_exec ($ch);
-        return $this->returned;
+
+		if($this->pw != ""){
+			$args['headers'] = array(
+				'Authorization' => 'Basic ' . base64_encode( $this->client . ':' . $this->pw ),
+			);
+		}
+		$result = wp_remote_request( $this->url, $args );
+		return $result["body"];
+
+
+		// $ch = curl_init ();
+  //       curl_setopt($ch,CURLOPT_URL, $this->url);
+  //       curl_setopt($ch,CURLOPT_RETURNTRANSFER,1);
+  //       if($this->pw != ""){
+  //       	curl_setopt($ch,CURLOPT_USERPWD,$this->client.":".$this->pw);
+  //       }
+  //       curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+  //       /**
+		//  * bugfix for errors in WP plugins
+		//  */
+		// curl_setopt(
+		// 	$ch, 
+		// 	CURLOPT_USERAGENT, 
+		// 	"Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.2 (KHTML, like Gecko) Chrome/22.0.1216.0 Safari/537.2"
+		// );
+  //       $this->returned = curl_exec ($ch);
+  //       return $this->returned;
 	}
 
 }
