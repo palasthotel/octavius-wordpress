@@ -143,11 +143,19 @@ class PH_Octavius_Store{
 	       	return $counter;
 		}
 	}
+	/**
+	 * resets all urls for url checker
+	 */
+	public function reset_all_ga_urls()
+	{
+		global $wpdb;
+		$wpdb->query("TRUNCATE TABLE ".$this->table_url_checker);
+	}
 
 	/**
 	 * get urls for url checker
 	 */
-	public function get_all_urls($page = 1)
+	public function get_ga_urls($page = 1)
 	{
 		$options = $this->get_options();
 		$domain = $options->domain;
@@ -155,8 +163,6 @@ class PH_Octavius_Store{
 
 		$url = $domain."/v1.0/".$client."/url-checker/".$page;
 
-		
-		var_dump($url);
 		$curl = new PH_Octavius_CURL($url, $options->client, $options->pw);
 		return $curl->get_JSON();
 	}
@@ -180,6 +186,7 @@ class PH_Octavius_Store{
 			KEY `type` (`type`),
 			KEY `views` (`views`)
 		);");
+
 		dbDelta( "CREATE TABLE IF NOT EXISTS `".$this->table_url_checker."` (
 			id INT unsigned NOT NULL AUTO_INCREMENT,
 			url VARCHAR(255) NOT NULL,

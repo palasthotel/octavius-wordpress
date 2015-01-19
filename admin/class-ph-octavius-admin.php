@@ -64,7 +64,7 @@ class PH_Octavius_Admin {
 		if(isset($_POST[$id_client]) && $_POST[$id_client] != ""
 			&& isset($_POST[$id_pw]) && $_POST[$id_pw] != ""
 			&& isset($_POST[$id_domain]) && $_POST[$id_domain] != ""){
-			$store->update_options($_POST[$id_client], $_POST[$id_pw], $_POST[$id_domain]);
+			$store->update_options( $_POST[ $id_client ], $_POST[ $id_pw ], $_POST[ $id_domain ] );
 		}
 
 		$options = $store->get_options();
@@ -80,11 +80,18 @@ class PH_Octavius_Admin {
 	 */
 	public function render_tool_url_checker()
 	{
-		global $wp;
-
-		$store = new PH_Octavius_Store();
-		$json = $store->get_all_urls();
-		var_dump($json);
+		/**
+		 * style for url checker
+		 */
+		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/url-checker.css', array(), $this->version, 'all' );
+		/**
+		 * Scripts for url checker
+		 */
+		wp_enqueue_script(
+			$this->plugin_name,
+			plugin_dir_url( __FILE__ )  . '/js/url-checker.js',
+			array( 'jquery' )
+		);
 
 		require dirname(__FILE__)."/partials/octavius-url-check-display.php";
 	}
@@ -95,6 +102,23 @@ class PH_Octavius_Admin {
 	public function load_grid_boxes()
 	{
 		require dirname(__FILE__)."/../grid-boxes/grid-octavius-box.inc";
+	}
+
+	/**
+	 * loads googleAnalytics urls from octavius server
+	 */
+	public function get_ga_urls()
+	{
+		$page = 1;
+		if( isset($_GET["page"]) )
+		{
+			$page = intval($_GET["page"]);
+		}
+		$store = new PH_Octavius_Store();
+		$result =  $store->get_ga_urls($page);
+		print json_encode($result);
+		wp_die();
+		
 	}
 
 }

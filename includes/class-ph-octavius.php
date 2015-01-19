@@ -138,6 +138,12 @@ class PH_Octavius {
 		 */
 		$this->loader->add_action( 'grid_load_classes', $plugin_admin, 'load_grid_boxes' );
 
+		/**
+		 * register url checker ajax call
+		 * /wp-admin/admin-ajax.php?action=octavius_get_ga_urls
+		 */
+		$this->loader->add_action('wp_ajax_octavius_get_ga_urls', $plugin_admin, 'get_ga_urls');
+
 	}
 
 	/**
