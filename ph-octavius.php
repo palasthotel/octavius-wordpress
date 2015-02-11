@@ -52,6 +52,5 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/class-ph-octavius.php';
 function run_ph_octavius() {
 	$plugin = new PH_Octavius();
 	$plugin->run();
-
 }
 run_ph_octavius();

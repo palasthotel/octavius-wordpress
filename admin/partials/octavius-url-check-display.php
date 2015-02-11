@@ -6,9 +6,8 @@
 
 ?>
 
-<div class="wrap">
+<div class="wrap octavius-url-checker">
 	<h2>Octavius URL Checker</h2>
-	<form method="post" action="<?php echo $_SERVER["PHP_SELF"]."?page=".$this->settings_page; ?>">
 
 		<table class="form-table">
 			<tr>
@@ -24,8 +23,10 @@
 				<td>20 <a href="#">Liste</a></td>
 			</tr>
 		</table>
-
+		<p>Status: <span class="octavius-status-display">inaktiv</span></p>
+		<div class="progress-bar-wrapper"><div class="progress-bar"></div></div>
 		<?php submit_button("Reload" ,"primary","ph_octavius_reload"); ?>
 
-	</form>
+
+
 </div>

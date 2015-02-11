@@ -41,7 +41,11 @@ class PH_Octavius_CURL{
 	 */
 	public function get_JSON()
 	{
-		return json_decode($this->execute());
+		$result = $this->execute();
+		if( is_wp_error($result) ){
+			return $result;
+		}
+		return json_decode($result);
 	}
 
 	/**
@@ -64,6 +68,9 @@ class PH_Octavius_CURL{
 			);
 		}
 		$result = wp_remote_request( $this->url, $args );
+		if( is_wp_error($result) ){
+			return $result;
+		}
 		return $result["body"];
 
 	}

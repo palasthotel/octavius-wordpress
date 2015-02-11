@@ -1,0 +1,36 @@
+.octavius-url-checker .progress-bar-wrapper{
+	position: relative;
+	border: 1px solid #ccc;
+	border-radius: 2px;
+	background-color: white;
+	height: 6px;
+	width: 300px;
+}
+.octavius-url-checker .progress-bar-wrapper .progress-bar{
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	bottom: 0px;
+	background-color: #efefef;
+	width: 1%;
+	border-radius: 2px;
+  -webkit-transform: all 0.2s; 
+      -ms-transform: all 0.2s; 
+          transform: all 0.2s; 
+
+}
+.octavius-url-checker .progress-bar-wrapper.loading .progress-bar{
+	background-color: #2ea2cc;
+	-webkit-animation-name: glow;
+	  -webkit-animation-duration: 2s;
+	  -webkit-animation-iteration-count: infinite;
+}
+.octavius-url-checker .progress-bar-wrapper.done .progress-bar{
+	background-color: #91bd09;
+}
+
+@-webkit-keyframes glow {
+  from { background-color: #2ea2cc; }
+  50% { background-color: #0074a2; }
+  to { background-color: #2ea2cc; }
+}

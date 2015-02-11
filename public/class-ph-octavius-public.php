@@ -96,8 +96,9 @@ class PH_Octavius_Public {
   		// if there is no page id -> redirect to first page 
   		if($page < 1) {
   			//$page = 1;
-  			$location = "http://".$_SERVER["HTTP_HOST"].$_SERVER["REQUEST_URI"]."/list/1";
+  			$location = "http://".$_SERVER["HTTP_HOST"]."/__api/octavius/list/1";
   			wp_redirect( $location, 301 );
+  			exit();
   		}
 
   		$root = array();

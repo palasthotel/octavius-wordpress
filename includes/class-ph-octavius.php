@@ -140,9 +140,9 @@ class PH_Octavius {
 
 		/**
 		 * register url checker ajax call
-		 * /wp-admin/admin-ajax.php?action=octavius_get_ga_urls
+		 * /wp-admin/admin-ajax.php?action=ph_octavius_get_ga_urls
 		 */
-		$this->loader->add_action('wp_ajax_octavius_get_ga_urls', $plugin_admin, 'get_ga_urls');
+		$this->loader->add_action('wp_ajax_ph_octavius_get_ga_urls', $plugin_admin, 'get_ga_urls');
 
 	}
 

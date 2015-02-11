@@ -116,7 +116,14 @@ class PH_Octavius_Admin {
 		}
 		$store = new PH_Octavius_Store();
 		$result =  $store->get_ga_urls($page);
-		print json_encode($result);
+		if(is_wp_error($result)){
+			print json_encode( array(
+				"error" => true,
+				"error_msg" => $result->get_error_message(),
+			) );
+		} else {
+			print json_encode($result);
+		}
 		wp_die();
 		
 	}

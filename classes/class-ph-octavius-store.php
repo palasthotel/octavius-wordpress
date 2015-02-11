@@ -45,11 +45,18 @@ class PH_Octavius_Store{
 	/**
 	 * get top List by type
 	 * @param  string 	$type 	Service type string
+	 * @param  date      minimum date of posts
 	 * @return array 			Array of post ids
 	 */
-	public function getTop($type){
+	public function getTop($type, $min_date = null){
 		global $wpdb;
-		return $wpdb->get_results( 'SELECT * FROM '.$this->table.' WHERE type = "'.$type.'" ORDER BY views DESC', OBJECT );
+
+		$date_query = "";
+		if($min_date != null){
+			$date_query = "AND p.post_date > '".$min_date."' ";
+		}
+
+		return $wpdb->get_results( 'SELECT * FROM '.$this->table.' as o, '.$wpdb->prefix.'posts as p WHERE p.ID = o.pid '.$date_query.'AND o.type = "'.$type.'" ORDER BY o.views DESC', OBJECT );
 	}
 
 	/**
@@ -110,6 +117,8 @@ class PH_Octavius_Store{
 		global $wpdb;
 		if(is_null($json_result)) {
 			return "[ERROR] NO JSON RESULT";
+		} else if(count($json_result) < 10){
+			return "[WARNING] Only got ".count($json_result)." results";
 		} else {
 			$wpdb->delete( $this->table, array( 'type' => $type ) );
 			$counter = 0;
@@ -155,16 +164,49 @@ class PH_Octavius_Store{
 	/**
 	 * get urls for url checker
 	 */
-	public function get_ga_urls($page = 1)
+	public function get_ga_urls($page = 1, $server = true)
 	{
 		$options = $this->get_options();
 		$domain = $options->domain;
 		$client = $options->client;
 
-		$url = $domain."/v1.0/".$client."/url-checker/".$page;
+		if($server){
+			$url = $domain."/v1.0/".$client."/url-checker/".$page;
+			$curl = new PH_Octavius_CURL($url, $options->client, $options->pw);
+			$json = $curl->get_JSON();
+			$urls = $json->urls;
+			$result = $this->save_ga_urls($urls);
+			unset($json->urls);
+			$this->save_ga_url_attributes($json);
+			$json->urls = $urls;
+		} else {
+			$json = $this->get_ga_url_attributes();
+			$json->page = $page;
+			$json->urls =  $this->get_ga_urls_local($page, $json->limit);
+		}
+		$json->server = $server;
+		
+		return $json;
+	}
 
-		$curl = new PH_Octavius_CURL($url, $options->client, $options->pw);
-		return $curl->get_JSON();
+	public function save_ga_url_attributes($attrs){
+		return update_site_option("ph_octavius_ga_url_attributes", $attrs);
+	}
+
+	public function get_ga_url_attributes(){
+		return (object)get_site_option("ph_octavius_ga_url_attributes", array());
+	}
+
+	public function save_ga_urls($urls_array){
+		global $wpdb;
+		$values = '( "'.implode('" ), ( "', $urls_array).'" )';
+		return $wpdb->query("INSERT INTO ".$this->table_url_checker." (url) VALUES $values ON DUPLICATE KEY UPDATE url = url" );
+	}
+
+	public function get_ga_urls_local($page = 1, $limit = 10000){
+		global $wpdb;
+		$low_limit = ( $page - 1 )  * $limit ;
+		return $wpdb->get_col( 'SELECT url FROM '.$this->table_url_checker." LIMIT $low_limit, $limit" );
 	}
 
 	/**
@@ -185,14 +227,14 @@ class PH_Octavius_Store{
 			UNIQUE KEY `pid_per_type` (`pid`,`type`),
 			KEY `type` (`type`),
 			KEY `views` (`views`)
-		);");
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE utf8_bin;");
 
 		dbDelta( "CREATE TABLE IF NOT EXISTS `".$this->table_url_checker."` (
 			id INT unsigned NOT NULL AUTO_INCREMENT,
 			url VARCHAR(255) NOT NULL,
 			PRIMARY KEY id (id),
 			UNIQUE KEY `url` (`url`)
-		);");
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE utf8_bin;");
 	}
 
 	/**
