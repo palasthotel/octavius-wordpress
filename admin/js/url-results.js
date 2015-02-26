@@ -8,10 +8,7 @@
 	var $bar_wrapper = $(".progress-bar-wrapper");
 	var $bar = $bar_wrapper.find(".progress-bar");
 
-	/**
-	 * recheck button listener
-	 * 
-	 */
+
 	$("#ph_octavius_reload").on("click", function(e){
 		e.preventDefault();
 		start_loading();
@@ -43,6 +40,7 @@
 			dataType: "json",
 			success: function(data){
 				if( data.error ){
+					console.log("error");
 					console.log(data);
 					setTimeout(function(){
 						console.log("try again");
@@ -67,8 +65,7 @@
 		$bar.css("width", parseInt( (json.page/json.pages *100) )+"%" );
 		if(json.page < json.pages)
 		{
-			var next_page = json.page+1;
-			load_urls(next_page);
+			load_urls(++json.page);
 		} else {
 			done_loading();		
 		}
@@ -96,7 +93,6 @@
 	function done_loading(){
 		stop_loading();
 		$bar_wrapper.addClass("done");
-		load_stats();
 	}
 
 	/**********************************
@@ -105,31 +101,16 @@
 	 var $meta_key_list = $("#meta-key-list");
 	 var $found_display = $("#octavius-found");
 	 var $lost_display = $("#octavius-lost");
-	 var $found_link = $("#octavius-found-link");
-	 var $lost_link = $("#octavius-lost-link");
 	 /**
 	  * on metakey change
 	  */
 	 $meta_key_list.on("change", function(){
-	 	console.log("changed list");
 	 	load_stats();
-	 	update_results_links
 	 });
 	/**
 	 * loads statistics
 	 */
 	function load_stats(){
-		var loading_stats = setInterval(function(){
-			var dots = $found_display.text();
-			if(dots.length > 3)
-			{
-				dots = ".";
-			} else {
-				dots+=".";
-			}
-			$found_display.text(dots);
-			$lost_display.text(dots);
-		},1000);
 		$.ajax({
 			url: ajaxurl,
 			data: {
@@ -144,14 +125,12 @@
 			},
 			dataType: "json",
 			success: function(data){
-				clearInterval(loading_stats);
 				if(!data.error){
 					$found_display.text(data.stats.found);
 					$lost_display.text(data.stats.lost);
 				} else {
 					console.log(data);
 				}
-				console.log(data);
 				
 			},
 			error: function(jqXHR, textStatus, errorThrown){
@@ -160,19 +139,9 @@
 		});
 	}
 	/**
-	 * updates links to details by select field
-	 */
-	function update_results_links()
-	{
-		var key = $meta_key_list.val();
-		$found_link.attr("href", "?page=ph-octavius_url_checker&show_results=found&meta_key="+key+"&paged=1");
-		$lost_link.attr("href", "?page=ph-octavius_url_checker&show_results=lost&meta_key="+key+"&paged=1");
-	}
-	/**
 	 * load stats on ready
 	 */
 	$(function(){
-		update_results_links();
 		load_stats();
 	});
 

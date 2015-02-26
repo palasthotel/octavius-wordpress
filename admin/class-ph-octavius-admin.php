@@ -80,20 +80,78 @@ class PH_Octavius_Admin {
 	 */
 	public function render_tool_url_checker()
 	{
-		/**
-		 * style for url checker
-		 */
-		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/url-checker.css', array(), $this->version, 'all' );
-		/**
-		 * Scripts for url checker
-		 */
-		wp_enqueue_script(
-			$this->plugin_name,
-			plugin_dir_url( __FILE__ )  . '/js/url-checker.js',
-			array( 'jquery' )
-		);
+		
+		if(
+			isset($_GET["show_results"]) && ($_GET["show_results"] == "found" || $_GET["show_results"] == "lost") &&
+			isset($_GET["meta_key"]) &&  $_GET["meta_key"] != ""
+			){
+			/**
+			 * style for url checker
+			 */
+			wp_enqueue_style( 
+				$this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/url-results.css', 
+				array(), 
+				$this->version, 
+				'all' 
+			);
+			/**
+			 * Scripts for url checker
+			 */
+			wp_enqueue_script(
+				$this->plugin_name,
+				plugin_dir_url( __FILE__ )  . '/js/url-results.js',
+				array( 'jquery' )
+			);
+			$type = sanitize_text_field($_GET["show_results"]);
+			$meta_key = sanitize_text_field($_GET["meta_key"]);
+			$elements = array();
+			$overall = 0;
+			$limit = 100;
+			$paged = (isset($_GET["paged"]))? $_GET["paged"]: 1;
 
-		require dirname(__FILE__)."/partials/octavius-url-check-display.php";
+			$store = new PH_Octavius_Store();
+
+			if($type == "found"){
+				$overall = $store->get_ga_found_count($meta_key);
+				$elements = $store->get_ga_found_elements($meta_key, $limit, $paged);
+				
+			} else {
+				$overall = $store->get_ga_lost_count($meta_key);
+				$elements = $store->get_ga_lost_elements($meta_key, $limit, $paged);
+			}
+			$pages = ceil($overall/$limit);
+
+			$base_url = "/wp-admin/tools.php?page=ph-octavius_url_checker";
+
+			$paged_url = $base_url."&meta_key=".$meta_key."&show_results=".$type."&paged=";
+
+			$prev_page = ($paged > 1)? $paged-1:1;
+			$next_page = ($paged < $pages )? $paged+1: $pages;			
+
+			require dirname(__FILE__)."/partials/octavius-url-results-display.php";
+		} else {
+			/**
+			 * style for url checker
+			 */
+			wp_enqueue_style( 
+				$this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/url-checker.css', 
+				array(), 
+				$this->version, 
+				'all' 
+			);
+		
+			/**
+			 * Scripts for url checker
+			 */
+			wp_enqueue_script(
+				$this->plugin_name,
+				plugin_dir_url( __FILE__ )  . '/js/url-checker.js',
+				array( 'jquery' )
+			);
+
+			require dirname(__FILE__)."/partials/octavius-url-check-display.php";
+		}
+		
 	}
 
 	/**
@@ -125,7 +183,28 @@ class PH_Octavius_Admin {
 			print json_encode($result);
 		}
 		wp_die();
-		
+	}
+
+	/**
+	 * get url checker statistics
+	 */
+	public function get_ga_statistics()
+	{
+		$result = (object) array();
+		$result->error = false;
+		$result->error_msg = "";
+		if( !isset($_GET["meta_key"]) ){
+			$result->error = true;
+			$result->error_msg = "No meta key for urls";
+			print json_encode($result);
+			wp_die();
+		}
+		$store = new PH_Octavius_Store();
+		$key = sanitize_text_field($_GET["meta_key"]);
+		update_option("octavius_url_checker_meta_key",$key);
+		$result->stats = $store->get_ga_matched_statistics($key);
+		print json_encode($result);
+		wp_die();
 	}
 
 }

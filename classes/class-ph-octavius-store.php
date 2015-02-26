@@ -55,8 +55,10 @@ class PH_Octavius_Store{
 		if($min_date != null){
 			$date_query = "AND p.post_date > '".$min_date."' ";
 		}
-
-		return $wpdb->get_results( 'SELECT * FROM '.$this->table.' as o, '.$wpdb->prefix.'posts as p WHERE p.ID = o.pid '.$date_query.'AND o.type = "'.$type.'" ORDER BY o.views DESC', OBJECT );
+		$query = 'SELECT * FROM '.$this->table.' as o, '.
+				$wpdb->prefix.'posts as p WHERE p.ID = o.pid '.
+				$date_query.'AND o.type = "'.$type.'" ORDER BY o.views DESC';
+		return $wpdb->get_results( $query, OBJECT );
 	}
 
 	/**
@@ -72,9 +74,9 @@ class PH_Octavius_Store{
 	}
 
 	/**
-	 * gets username from options
+	 * updates octavius options
 	 */
-	public function  update_options($client, $pw, $domain){
+	public function update_options($client, $pw, $domain){
 		update_option("ph_octavius_client", sanitize_text_field( $client ) );
 		update_option("ph_octavius_pw", sanitize_text_field( $pw ) );
 		/**
@@ -89,9 +91,9 @@ class PH_Octavius_Store{
 	}
 
 	/**
-	 * Set Octavius Page Data to Meta Field
+	 *	get new data from octavius service
   	 */
-	public function get_data_from_remote() {
+	public function get_data_from_remote($toponly = true) {
 		$options = $this->get_options();
 		// get Latest Date from Octavius
 		$location = $options->domain."/v1.0/".$options->client."/getTopLists";
@@ -100,7 +102,12 @@ class PH_Octavius_Store{
 		$return = array();
 		if(!is_array($json_result) && !is_object($json_result)) return $return;
         foreach ($json_result as $type => $data) {
-        	$return[$type] = $this->import_tops($options->domain.$data->url, $type, $options);
+        	if($toponly){
+        		$return[$type] = $this->import_tops($options->domain.$data->url, $type, $options);
+        	} else {
+        		$return[$type] = $this->import_all($options->domain.$data->url, $type, $options);
+        	}
+        	
         }
         return $return;
 	}
@@ -113,45 +120,70 @@ class PH_Octavius_Store{
 	 */
 	private function import_tops($url, $type, $options){
 		$curl = new PH_Octavius_CURL($url, $options->client, $options->pw);
-		$json_result = $curl->get_JSON();
-		global $wpdb;
 		if(is_null($json_result)) {
 			return "[ERROR] NO JSON RESULT";
 		} else if(count($json_result) < 10){
 			return "[WARNING] Only got ".count($json_result)." results";
 		} else {
-			$wpdb->delete( $this->table, array( 'type' => $type ) );
-			$counter = 0;
-			foreach($json_result as $item) 
-			{
-				$count = null;
-				// TODO: save all types of numbers
-				if($type == "facebook"){
-					$count = $item->like;
-				} else if($type == "twitter"){
-					$count = $item->count;
-				} else {
-					$count = $item->pageviews;
-				}
-				
-	        	$result = $wpdb->replace( 
-	        		$this->table, 
-	        		array( 
-	        			"pid" => $item->page_id , 
-	        			"views" => $count,
-	        			"type" => $type,
-	        		),
-	        		array(
-	        			"%d",
-	        			"%d",
-	        			"%s",
-	        		)
-	        	);
-	        	$counter++;
-	       	}
-	       	return $counter;
+			
+	       	return $this->insert_data($type, $curl->get_JSON() );
 		}
 	}
+
+	/**
+	 * imports the all pages from octavius
+	 * @param  url where the json is waiting to be red
+	 * @param  type of data
+	 * @param  htaccess user:password
+	 */
+	public function import_all($url, $type, $options)
+	{	
+		$page = 1;
+		$inserted = 0;
+		do{
+			$curl = new PH_Octavius_CURL(rtrim($url, "/")."/".$page, $options->client, $options->pw);
+			$json_result = $curl->get_JSON();
+			if( $page == 1 && count($json_result) > 0){
+				$wpdb->query("TRUNCATE TABLE ".$this->table);
+			}
+			$inserted = $inserted+$this->insert_data($type, $json_result);
+			$page++;
+		} while( count($json_result) > 0 );
+		return $inserted;
+	}
+
+	/**
+	 * inserts octavius datas
+	 * @param  string $type   	which type of data to save
+	 * @param  array $items 	array of data items
+	 * @return int       number of rows affected
+	 */
+	public function insert_data($type, $items){
+		global $wpdb;
+		
+		$values = array();
+		foreach($items as $item) 
+		{
+			$count = null;
+			if($type == "facebook"){
+				$count = $item->like;
+			} else if($type == "twitter"){
+				$count = $item->count;
+			} else {
+				$count = $item->pageviews;
+			}
+
+			$values[] = "( '".$item->page_id."', '".$count."', '".$type."' )";
+
+       	}
+       	if(count($values) > 0){
+       		$query = "INSERT INTO ".$this->table." (pid, views, type) VALUES ".implode(",", $values).";";
+       		return $wpdb->query($query);
+       	} 
+       	return 0;
+       	
+	}
+
 	/**
 	 * resets all urls for url checker
 	 */
@@ -181,9 +213,9 @@ class PH_Octavius_Store{
 			$json->urls = $urls;
 		} else {
 			$json = $this->get_ga_url_attributes();
-			$json->page = $page;
 			$json->urls =  $this->get_ga_urls_local($page, $json->limit);
 		}
+		$json->page = $page;
 		$json->server = $server;
 		
 		return $json;
@@ -199,14 +231,97 @@ class PH_Octavius_Store{
 
 	public function save_ga_urls($urls_array){
 		global $wpdb;
-		$values = '( "'.implode('" ), ( "', $urls_array).'" )';
-		return $wpdb->query("INSERT INTO ".$this->table_url_checker." (url) VALUES $values ON DUPLICATE KEY UPDATE url = url" );
+		$count =0;
+		foreach ($urls_array as $url) {
+			$wpdb->replace(
+				$this->table_url_checker,
+				array(
+					"url" => $url,
+				),
+				array(
+					"%s",
+				)
+			);
+			$count++;
+		}
+		return $count;
 	}
 
 	public function get_ga_urls_local($page = 1, $limit = 10000){
 		global $wpdb;
 		$low_limit = ( $page - 1 )  * $limit ;
 		return $wpdb->get_col( 'SELECT url FROM '.$this->table_url_checker." LIMIT $low_limit, $limit" );
+	}
+
+	/**
+	 * return lost and found statistics for url checker
+	 * 
+	 */
+	public function get_ga_matched_statistics($postmeta_key)
+	{
+		global $wpdb;
+		$stats = (object) array();
+		
+		$stats->found =  $this->get_ga_found_count($postmeta_key);
+		$stats->lost =  $this->get_ga_lost_count($postmeta_key);
+
+		return $stats;
+	}
+
+	public function get_ga_found_count($postmeta_key)
+	{
+		global $wpdb;
+		// return "SELECT COUNT(ga.id) FROM `".$this->table_url_checker."` ga INNER JOIN ".
+		// 	$wpdb->prefix."postmeta wp ON ga.url = wp.meta_value AND wp.meta_key='".$postmeta_key."'";
+		return intval($wpdb->get_var("SELECT COUNT(ga.id) FROM `".$this->table_url_checker."` ga INNER JOIN ".
+			$wpdb->prefix."postmeta wp ON ga.url = wp.meta_value AND wp.meta_key='".$postmeta_key."'"));
+	}
+
+	public function get_ga_lost_count($postmeta_key)
+	{
+		global $wpdb;
+		return intval($wpdb->get_var("SELECT COUNT(url) FROM `".$this->table_url_checker."` WHERE id NOT IN( SELECT ga.id FROM `".
+			$this->table_url_checker."` ga INNER JOIN ".$wpdb->prefix."postmeta wp ON ga.url = wp.meta_value ".
+			"AND wp.meta_key='".$postmeta_key."')"));
+	}
+
+	/**
+	 * get all found elements 
+	 * 
+	 */
+	public function get_ga_found_elements($postmeta_key, $limit = null, $page = null)
+	{
+		global $wpdb;
+		return $wpdb->get_results(
+			"SELECT ga.id, post_id, meta_id, url FROM `".$this->table_url_checker."` ga INNER JOIN ".
+			$wpdb->prefix."postmeta wp ON ga.url = wp.meta_value AND wp.meta_key='".$postmeta_key."' ORDER BY url".
+			$this->build_limit_query($limit, $page)
+		);
+	}
+	/**
+	 * get all lost urls from database
+	 */
+	public function get_ga_lost_elements($postmeta_key, $limit = null, $page = null)
+	{	
+		
+		global $wpdb;
+		return $wpdb->get_results(
+			"SELECT url FROM `".$this->table_url_checker."` WHERE id NOT IN( SELECT ga.id FROM `".
+			$this->table_url_checker."` ga INNER JOIN ".$wpdb->prefix."postmeta wp ON ga.url = wp.meta_value ".
+			"AND wp.meta_key='".$postmeta_key."') ORDER BY url".
+			$this->build_limit_query($limit, $page)
+		);
+	}
+
+	private function build_limit_query($limit = null, $page = null)
+	{
+		if($page != null){
+			return " LIMIT ".($page-1)*$limit.", ".$limit;
+		} else if($limit != null)
+		{
+			return " LIMIT ".$limit;
+		}
+		return "";
 	}
 
 	/**
