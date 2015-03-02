@@ -107,8 +107,8 @@ class PH_Octavius_Store{
         	} else {
         		$return[$type] = $this->import_all($options->domain.$data->url, $type, $options);
         	}
-        	
         }
+        do_action("ph_octavius_new_data", $toponly);
         return $return;
 	}
 
@@ -120,12 +120,14 @@ class PH_Octavius_Store{
 	 */
 	private function import_tops($url, $type, $options){
 		$curl = new PH_Octavius_CURL($url, $options->client, $options->pw);
+		$json_result = $curl->get_JSON();
 		if(is_null($json_result)) {
 			return "[ERROR] NO JSON RESULT";
 		} else if(count($json_result) < 10){
 			return "[WARNING] Only got ".count($json_result)." results";
 		} else {
-			
+			global $wpdb;
+			$wpdb->delete($this->table, array('type'=> $type), array("%s"));
 	       	return $this->insert_data($type, $curl->get_JSON() );
 		}
 	}
@@ -144,7 +146,8 @@ class PH_Octavius_Store{
 			$curl = new PH_Octavius_CURL(rtrim($url, "/")."/".$page, $options->client, $options->pw);
 			$json_result = $curl->get_JSON();
 			if( $page == 1 && count($json_result) > 0){
-				$wpdb->query("TRUNCATE TABLE ".$this->table);
+				global $wpdb;
+				$wpdb->delete($this->table, array('type'=> $type), array("%s"));
 			}
 			$inserted = $inserted+$this->insert_data($type, $json_result);
 			$page++;
@@ -160,8 +163,8 @@ class PH_Octavius_Store{
 	 */
 	public function insert_data($type, $items){
 		global $wpdb;
-		
-		$values = array();
+
+		$inserted = 0;
 		foreach($items as $item) 
 		{
 			$count = null;
@@ -172,15 +175,25 @@ class PH_Octavius_Store{
 			} else {
 				$count = $item->pageviews;
 			}
+			$insert = $wpdb->insert(
+				$this->table,
+				array(
+					"pid" => $item->page_id,
+					"views" => $count,
+					"type" => $type,
+				),
+				array(
+					"%d",
+					"%d",
+					"%s",
+				)
+			);
+			if(!is_wp_error($insert)){
+				$inserted++;
+			}
 
-			$values[] = "( '".$item->page_id."', '".$count."', '".$type."' )";
-
-       	}
-       	if(count($values) > 0){
-       		$query = "INSERT INTO ".$this->table." (pid, views, type) VALUES ".implode(",", $values).";";
-       		return $wpdb->query($query);
        	} 
-       	return 0;
+       	return $inserted;
        	
 	}
 
