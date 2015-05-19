@@ -64,7 +64,8 @@ class PH_Octavius_Admin {
 		if(isset($_POST[$id_client]) && $_POST[$id_client] != ""
 			&& isset($_POST[$id_pw]) && $_POST[$id_pw] != ""
 			&& isset($_POST[$id_domain]) && $_POST[$id_domain] != ""){
-			$store->update_options( $_POST[ $id_client ], $_POST[ $id_pw ], $_POST[ $id_domain ] );
+
+			$store->update_options( $this->sanitize($_POST[ $id_client ]), $this->sanitize($_POST[ $id_pw ]), $this->sanitize($_POST[ $id_domain ]) );
 		}
 
 		$options = $store->get_options();
@@ -73,6 +74,10 @@ class PH_Octavius_Admin {
 		$submit_button_text = "Speichern";
 
 		require dirname(__FILE__)."/partials/octavius-settings-display.php";
+	}
+
+	private function sanitize($value){
+		return strip_tags(str_replace(array('"',"'",'='), array('','',''),$value));
 	}
 
 	/**
@@ -193,16 +198,22 @@ class PH_Octavius_Admin {
 		$result = (object) array();
 		$result->error = false;
 		$result->error_msg = "";
-		if( !isset($_GET["meta_key"]) ){
+		$regex = $_POST["regex"];
+		$page = intval($_POST["page"]);
+		$regex_ob = json_decode('{"ob": "'.$regex.'" }');
+		$regex = $regex_ob->ob;
+		if( !isset($_POST["meta_key"]) && !isset($regex) ){
 			$result->error = true;
-			$result->error_msg = "No meta key for urls";
+			$result->error_msg = "No meta key and regex for urls";
 			print json_encode($result);
 			wp_die();
 		}
+		// TODO check regex
 		$store = new PH_Octavius_Store();
-		$key = sanitize_text_field($_GET["meta_key"]);
+		$key = sanitize_text_field($_POST["meta_key"]);
 		update_option("octavius_url_checker_meta_key",$key);
-		$result->stats = $store->get_ga_matched_statistics($key);
+		$result->stats = $store->get_ga_matched_statistics($key, $regex, $page);
+		
 		print json_encode($result);
 		wp_die();
 	}

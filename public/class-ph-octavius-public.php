@@ -116,8 +116,15 @@ class PH_Octavius_Public {
 	    $limit = 1000;
 	    $low_limit = ( $page - 1 )  * $limit ;
 
+	    $post_types = array("post", "artists", "issue", "issues", "page", "reviews");
+
+	    $type_querys = array();
+	    foreach ($post_types as $ptype) {
+	    	$type_querys[] = "post_type='$ptype'";
+	    }
+
 	    $results = $wpdb->get_results( 'SELECT ID, post_type, guid, post_date FROM ' . $wpdb->prefix . 'posts '.
-	    	'WHERE post_status ="publish" AND post_type="post" ORDER BY post_date DESC LIMIT '.$low_limit.','.$limit, OBJECT );
+	    	'WHERE post_status ="publish" AND ('.implode(" OR ", $type_querys).') ORDER BY post_date DESC LIMIT '.$low_limit.','.$limit, OBJECT );
 
 		foreach ($results as $result) {
 			$item = array();
@@ -127,7 +134,19 @@ class PH_Octavius_Public {
 			$link_path = str_replace( home_url(), "", get_permalink($result->ID) );
 			$item["permalink"] =  $link_path;
 			$item["pubDate"] = $result->post_date;
+
+			
+
 			$root["items"][] = $item;
+			/**
+			 * add alternative urls for example from migrations
+			 */
+			$more_urls = apply_filters("ph_octavius_list_urls", array(), $result->ID);
+			foreach ($more_urls as $_url) {
+				$item["permalink"] = $_url;
+				$root["items"][] = $item;
+			}
+			
 		}
 
 	    header("Content-Type: application/json;charset=UTF-8");

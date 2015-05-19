@@ -8,12 +8,24 @@
 
 <div class="wrap octavius-url-checker">
 	<h2>Octavius URL Checker</h2>
-		<p>Status: <span class="octavius-status-display">inaktiv</span></p>
+		<?php
+		$options = get_option('ph_octavius_ga_url_attributes', array());
+		$page = (isset($options->page))? $options->page: 0;
+		$pages = (isset($options->pages))? $options->pages: "...";
+		// var_dump( $options );
+		?>
+		<input type="hidden" id="last-page-loaded" value="<?php echo $page; ?>">
+		<p>Status: <span class="octavius-status-display"><?php echo $page."/".$pages; ?></span></p>
 		<div class="progress-bar-wrapper"><div class="progress-bar"></div></div>
-		<?php submit_button("URLs Check" ,"primary","ph_octavius_reload"); ?>
+		<p><?php submit_button("Load URLs" ,"primary","ph_octavius_load", false); ?> 
+		<?php submit_button("Reload URLs" ,"primary","ph_octavius_reload", false); ?></p>
+		
+		<hr />
 
-		<label for="url-migration-meta">Metafeld der alten URL</label><br>
-		<select id="meta-key-list">
+		<table class="form-table">
+			<tr>
+				<th><label for="url-migration-meta">Metafeld der alten URL</label></th>
+				<td><select id="meta-key-list">
 			<?php 
 			global $wpdb;
 			$metas = $wpdb->get_results("SELECT DISTINCT meta_key FROM ".$wpdb->prefix."postmeta");
@@ -26,15 +38,28 @@
 				echo "<option $selected value='".$meta->meta_key."'>".$meta->meta_key."</option>";
 			}
 			?>
-		</select>
-		<table class="form-table">
+		</select></td>
+			</tr>
+
+			<tr>
+				<th><label for="url-migration-regex">Regex</label></th>
+				<td><input type="text" id="url-migration-regex" value="^.*/article(\d+)(\.ece|/).*$" /></td>
+			</tr>
 			<tr>
 				<th scope="row">Gefunden</th>
-				<td><a id="octavius-found-link" href="#"><span id="octavius-found">.</span></a></td>
+				<td><span id="octavius-found">.</span></td>
 			</tr>
 			<tr>
 				<th scope="row">Nicht gefunden</th>
-				<td><a id="octavius-lost-link" href="?page=ph-octavius_url_checker&amp;show_results=lost&amp;paged=1"><span id="octavius-lost">.</span></a></td>
+				<td><span id="octavius-lost">.</span></td>
+			</tr>
+			<tr>
+				<th scope="row">Status</th>
+				<td><span id="octavius-loading">.</span></td>
+			</tr>
+			<tr>
+				<th></th>
+				<td><?php submit_button("Reload page to check again" ,"primary","ph_octavius_check"); ?></td>
 			</tr>
 		</table>
 

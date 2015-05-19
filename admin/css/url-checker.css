@@ -28,6 +28,9 @@
 .octavius-url-checker .progress-bar-wrapper.done .progress-bar{
 	background-color: #91bd09;
 }
+#url-migration-regex{
+	width: 100%;
+}
 
 @-webkit-keyframes glow {
   from { background-color: #2ea2cc; }

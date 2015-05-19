@@ -7,6 +7,7 @@
 	var $state = $(".octavius-status-display");
 	var $bar_wrapper = $(".progress-bar-wrapper");
 	var $bar = $bar_wrapper.find(".progress-bar");
+	var $page = $("#last-page-loaded");
 
 	/**
 	 * recheck button listener
@@ -16,6 +17,15 @@
 		e.preventDefault();
 		start_loading();
 		load_urls(1);
+	});
+	$("#ph_octavius_load").on("click", function(e){
+		e.preventDefault();
+		start_loading();
+		var page = $page.val();
+		if(page == "" || page == 0){
+			page = 1;
+		}
+		load_urls(page);
 	});
 
 	/**
@@ -105,52 +115,78 @@
 	 var $meta_key_list = $("#meta-key-list");
 	 var $found_display = $("#octavius-found");
 	 var $lost_display = $("#octavius-lost");
-	 var $found_link = $("#octavius-found-link");
-	 var $lost_link = $("#octavius-lost-link");
+	 // var $found_link = $("#octavius-found-link");
+	 var $stats_loading = $("#octavius-loading");
+	 // var $lost_link = $("#octavius-lost-link");
+	 var $regex = $("#url-migration-regex");
+	 var stats_click
+	 $("#ph_octavius_check").click(function(e){
+	 	e.preventDefault();
+	 	window.location.reload();
+	 });
 	 /**
 	  * on metakey change
 	  */
 	 $meta_key_list.on("change", function(){
-	 	console.log("changed list");
-	 	load_stats();
-	 	update_results_links
+	 	found = 0;
+	 	// update_results_links();
+	 	window.location.reload();
 	 });
 	/**
 	 * loads statistics
 	 */
-	function load_stats(){
+	var dotchange = false;
+	var dots = "";
+	var found = 0;
+	var stats_loading =  false;
+	function load_stats(page){
+		if(stats_loading) return;
+		var stats_loading = true;
+		if(typeof page === typeof undefined) page = 1;
 		var loading_stats = setInterval(function(){
-			var dots = $found_display.text();
-			if(dots.length > 3)
-			{
-				dots = ".";
-			} else {
-				dots+=".";
-			}
-			$found_display.text(dots);
-			$lost_display.text(dots);
+			dots = (dotchange)? "..": ".";
+			dotchange = !dotchange;
+			$stats_loading.text("Lade"+dots);
 		},1000);
+		var data = {
+			/**
+			 * registered action
+			 */
+			action: "ph_octavius_get_ga_statistics",
+			/**
+			 * if fresh data should be loaded from octavius service
+			 */
+			meta_key: $meta_key_list.val(),
+			regex: $regex.val(),
+			page: page,
+		};
+		console.log(data);
 		$.ajax({
 			url: ajaxurl,
-			data: {
-				/**
-				 * registered action
-				 */
-				action: "ph_octavius_get_ga_statistics",
-				/**
-				 * if fresh data should be loaded from octavius service
-				 */
-				meta_key: $meta_key_list.val(),
-			},
+			method: "POST",
+			data: data,
 			dataType: "json",
 			success: function(data){
 				clearInterval(loading_stats);
 				if(!data.error){
-					$found_display.text(data.stats.found);
-					$lost_display.text(data.stats.lost);
-				} else {
-					console.log(data);
+					if(typeof data.stats.found_meta !== typeof undefined){
+						found+= parseInt(data.stats.found_meta);
+					}
+					found+=parseInt(data.stats.found_esenic);
+
+					$found_display.text(found);
+					var lost = parseInt(data.stats.overall) -found;
+					$lost_display.text(lost);
+
+					if(data.stats.again){
+						page++;
+						stats_loading = false;
+						load_stats(page);
+					} else {
+						$stats_loading.text("Fertig");
+					}
 				}
+				
 				console.log(data);
 				
 			},
@@ -164,9 +200,9 @@
 	 */
 	function update_results_links()
 	{
-		var key = $meta_key_list.val();
-		$found_link.attr("href", "?page=ph-octavius_url_checker&show_results=found&meta_key="+key+"&paged=1");
-		$lost_link.attr("href", "?page=ph-octavius_url_checker&show_results=lost&meta_key="+key+"&paged=1");
+		// var key = $meta_key_list.val();
+		// $found_link.attr("href", "?page=ph-octavius_url_checker&show_results=found&meta_key="+key+"&paged=1");
+		// $lost_link.attr("href", "?page=ph-octavius_url_checker&show_results=lost&meta_key="+key+"&paged=1");
 	}
 	/**
 	 * load stats on ready
