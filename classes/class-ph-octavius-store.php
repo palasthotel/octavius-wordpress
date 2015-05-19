@@ -48,16 +48,20 @@ class PH_Octavius_Store{
 	 * @param  date      minimum date of posts
 	 * @return array 			Array of post ids
 	 */
-	public function getTop($type, $min_date = null){
+	public function getTop($type, $min_date = null, $limit = null){
 		global $wpdb;
 
 		$date_query = "";
 		if($min_date != null){
 			$date_query = "AND p.post_date > '".$min_date."' ";
 		}
-		$query = 'SELECT * FROM '.$this->table.' as o, '.
+		$limit_query = "";
+		if($limit != null){
+			$limit_query = " LIMIT ".$limit;
+		}
+		$query = 'SELECT p.ID, p.post_title, p.post_type, p.post_status, p.guid, o.views, o.pid FROM '.$this->table.' as o, '.
 				$wpdb->prefix.'posts as p WHERE p.ID = o.pid '.
-				$date_query.'AND o.type = "'.$type.'" ORDER BY o.views DESC';
+				$date_query.'AND o.type = "'.$type.'" ORDER BY o.views DESC '.$limit_query;
 		return $wpdb->get_results( $query, OBJECT );
 	}
 
