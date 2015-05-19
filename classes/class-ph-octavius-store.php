@@ -179,20 +179,24 @@ class PH_Octavius_Store{
 			} else {
 				$count = $item->pageviews;
 			}
-			$insert = $wpdb->insert(
-				$this->table,
-				array(
-					"pid" => $item->page_id,
-					"views" => $count,
-					"type" => $type,
-				),
-				array(
-					"%d",
-					"%d",
-					"%s",
-				)
-			);
-			if(!is_wp_error($insert)){
+			// $insert = $wpdb->insert(
+			// 	$this->table,
+			// 	array(
+			// 		"pid" => $item->page_id,
+			// 		"views" => $count,
+			// 		"type" => $type,
+			// 	),
+			// 	array(
+			// 		"%d",
+			// 		"%d",
+			// 		"%s",
+			// 	)
+			// );
+			$pid = intval($item->page_id);
+			$count = intval($count);
+			$type = sanitize_text_field($type);
+			$result = $wpdb->query('INSERT INTO '.$this->table.' (pid, views, type) VALUES ( '.$pid.' , '.$count.' , "'.$type.'") ON DUPLICATE KEY UPDATE views = views+'.$count);
+			if(!is_wp_error($result)){				
 				$inserted++;
 			}
 
@@ -267,22 +271,84 @@ class PH_Octavius_Store{
 	public function get_ga_urls_local($page = 1, $limit = 10000){
 		global $wpdb;
 		$low_limit = ( $page - 1 )  * $limit ;
-		return $wpdb->get_col( 'SELECT url FROM '.$this->table_url_checker." LIMIT $low_limit, $limit" );
+		return $wpdb->get_col( 'SELECT url FROM '.$this->table_url_checker." WHERE url LIKE '%/article%' AND url NOT LIKE '%?%' LIMIT $low_limit, $limit" );
+	}
+
+	public function count_ga_urls(){
+		global $wpdb;
+		return $wpdb->get_var( 'SELECT COUNT(*) FROM '.$this->table_url_checker." WHERE url LIKE '%/article%' AND url NOT LIKE '%?%'" );
 	}
 
 	/**
 	 * return lost and found statistics for url checker
 	 * 
 	 */
-	public function get_ga_matched_statistics($postmeta_key)
+	public function get_ga_matched_statistics($postmeta_key, $regex, $page = 1)
 	{
 		global $wpdb;
 		$stats = (object) array();
-		
-		$stats->found =  $this->get_ga_found_count($postmeta_key);
-		$stats->lost =  $this->get_ga_lost_count($postmeta_key);
-
+		$stats->overall = $this->count_ga_urls();
+		if($page == 1){
+			// match exact
+			// $stats->found_meta =  $this->get_ga_found_count($postmeta_key);
+			$stats->found_meta = 0;
+		}
+		// match with regex
+		$esenic = $this->get_ga_found_esenic($regex, $page);
+		$stats->found_esenic = $esenic->found;
+		$stats->matched_esenic = $esenic->matched;
+		$stats->again = $esenic->again;
+		$stats->lost_urls = $esenic->esenic_lost;
+		$this->write_log( implode("\n", $esenic->esenic_lost)  );
 		return $stats;
+	}
+	public function write_log($message, $new = false){
+		$file = fopen(dirname(__FILE__)."/log.txt", "a");
+		fwrite($file, $message);
+		fclose($file);
+	}
+
+	public function get_ga_found_esenic($regex, $page = 1){
+		global $wpdb;
+		$result = (object) array("found" => 0,"matched" =>0, "urls"=>array(), "esenic_lost" => array(), "again" => true );
+		$regex = "@".$regex."@uiUs";
+		$urls = $this->get_ga_urls_local($page);
+		if(count($urls) < 1){
+			$result->again = false;
+		}
+		foreach ($urls as $url) {
+			$result->urls[] = $url;
+			if( preg_match($regex, $url, $match) ){
+				$result->matched++;
+				$esenic_id = $match[1];
+				$found = $wpdb->get_var('SELECT COUNT(*) FROM '.$wpdb->prefix.'postmeta WHERE meta_value = "article'.$esenic_id.'.ece"');
+				if($found){
+					$result->found++;
+				} else {
+					$result->esenic_lost[] = $match[0];
+				}
+			}
+		}
+		return $result;
+
+	}
+
+	public function get_ga_found_regex($postmeta_key, $regex){
+		global $wpdb;
+		$subquery = "SELECT ga.url FROM ".$this->table_url_checker." ga INNER JOIN ".$wpdb->prefix."postmeta wp ".
+		"ON ga.url = wp.meta_value AND wp.meta_key='".$postmeta_key."'";
+		$query = "SELECT wp.meta_value FROM ".$wpdb->prefix."postmeta wp ".
+				"WHERE wp.meta_key = '_asmb_old_url' AND wp.meta_value NOT IN ( ".$subquery." )";
+		$urls = $wpdb->get_col( $query );
+		$result = (object) array("found" => 0, "urls" => $urls); 
+		$result->regex = "@".$regex."@uiUs";
+		foreach ($urls as $url) {
+
+			if( preg_match($result->regex, $url) ){
+				$result->found++;
+			}
+		}
+		return $result;
 	}
 
 	public function get_ga_found_count($postmeta_key)
